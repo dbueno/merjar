@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+
+from zipfile import ZipFile
+import argparse
+import logging
+import textwrap
+import importlib.metadata
+
+logger = logging.getLogger(__name__)
+try:
+    version = importlib.metadata.version("merjar")
+except importlib.metadata.PackageNotFoundError:
+    version = "dev"
+
+
+def status(msg):
+    print(f"-- {msg}")
+
+def merge_into(zipfile: ZipFile, out: ZipFile):
+    for info in zipfile.infolist():
+        if info.is_dir():
+            continue
+        with zipfile.open(info) as rf:
+            with out.open(info, "w") as wf:
+                wf.write(rf.read())
+
+def merge(args):
+    out = ZipFile(args.output, mode="w")
+
+    if args.input:
+        with open(args.input, "r") as fp:
+            args.filename.extend(line.strip() for line in fp)
+
+    status(f"""merging {", ".join(map(lambda f: f"'{f}'", args.filename))} into '{args.output}'""")
+    for file in args.filename:
+        merge_into(ZipFile(file), out)
+
+def make_argparser():
+    parser = argparse.ArgumentParser(
+        description=textwrap.dedent(
+            f"""
+            Merge JAR files safely.
+
+            Merges all jars given on the command line and in files into one jar. This is done in memory rather than by extracting into files. This avoids an issue where filenames like 'com.tony.stark' and 'com.Tony.Stark' collide on case-insensitive filesystems."""))
+    parser.add_argument("--log", metavar="<level>", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], default="WARNING",
+                        help="Logger level: %(choices)s (default: %(default)s)")
+    parser.add_argument("filename", metavar="<jarfile>", nargs="*",
+                        help="List of jarfiles")
+    parser.add_argument("-i", "--input", metavar="<jarfile-list>",
+                        help="File that contains a list of jarfiles, one per line")
+    parser.add_argument("-o", "--output", metavar="<jarfile>", default="merjar.jar",
+                        help="Merged jar file")
+    return parser
+
+def main():
+    status(f"merjar version {version}")
+    parser = make_argparser()
+    args = parser.parse_args()
+    logging.basicConfig(level=getattr(logging, args.log.upper()))
+    merge(args)
+    return 0
+
+if __name__ == "__main__":
+    exit(main())
