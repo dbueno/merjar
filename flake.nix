@@ -24,8 +24,8 @@
             (path: type: !(elem (baseNameOf path) elide))
             ./.;
 
-
           doCheck = false;
+          meta.mainProgram = "merjar";
         };
 
         merjar = pkgs.callPackage merjar-pkg {};
