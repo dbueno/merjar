@@ -45,9 +45,9 @@ def make_argparser():
     parser.add_argument("--log", metavar="<level>", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], default="WARNING",
                         help="Logger level: %(choices)s (default: %(default)s)")
     parser.add_argument("filename", metavar="<jarfile>", nargs="*",
-                        help="List of jarfiles")
+                        help="Jar file to merge")
     parser.add_argument("-i", "--input", metavar="<jarfile-list>",
-                        help="File that contains a list of jarfiles, one per line")
+                        help="File that contains a list of jar files, one per line")
     parser.add_argument("-o", "--output", metavar="<jarfile>", default="merjar.jar",
                         help="Merged jar file")
     return parser

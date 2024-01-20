@@ -9,13 +9,13 @@ Merge JAR files safely. Merges all jars given on the command line and in files i
 files. This avoids an issue where filenames like 'com.tony.stark' and 'com.Tony.Stark' collide on case-insensitive filesystems.
 
 positional arguments:
-  <jarfile>             List of jarfiles
+  <jarfile>             Jar file to merge
 
 options:
   -h, --help            show this help message and exit
   --log <level>         Logger level: DEBUG, INFO, WARNING, ERROR, CRITICAL (default: WARNING)
   -i <jarfile-list>, --input <jarfile-list>
-                        File that contains a list of jarfiles, one per line
+                        File that contains a list of jar files, one per line
   -o <jarfile>, --output <jarfile>
                         Merged jar file
 ```
