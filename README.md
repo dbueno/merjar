@@ -19,3 +19,7 @@ options:
   -o <jarfile>, --output <jarfile>
                         Merged jar file
 ```
+
+# Limitations
+
+Does not do any special manifest handling.
