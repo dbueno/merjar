@@ -12,12 +12,12 @@
       let
         pkgs = import nixpkgs { inherit system; };
 
-        merjar-pkg = { python3, makeWrapper, lib, ghidra }: python3.pkgs.buildPythonPackage rec {
+        merjar-pkg = { python3, makeWrapper, lib }: python3.pkgs.buildPythonPackage rec {
           name = "merjar";
           version = "0.0.1";
           src =
             let
-              elide = [ "jadx-cli-1.4.5.jar" "jadx-core-1.4.5.jar" ];
+              elide = [];
             in
             with builtins;
             filterSource
