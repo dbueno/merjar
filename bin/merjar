@@ -16,16 +16,25 @@ except importlib.metadata.PackageNotFoundError:
 def status(msg):
     print(f"-- {msg}")
 
-def merge_into(zipfile: ZipFile, out: ZipFile):
-    for info in zipfile.infolist():
-        if info.is_dir():
-            continue
-        with zipfile.open(info) as rf:
-            with out.open(info, "w") as wf:
-                wf.write(rf.read())
+class FatJar:
+    def __init__(self, out: ZipFile):
+        self._out = out
+        self._name_index = set()
+
+    def merge(self, zipfile: ZipFile):
+        for info in zipfile.infolist():
+            if info.is_dir():
+                continue
+            # Skips duplicate entries
+            if info.filename in self._name_index:
+                continue
+            self._name_index.add(info.filename)
+            with zipfile.open(info) as rf:
+                with self._out.open(info, "w") as wf:
+                    wf.write(rf.read())
 
 def merge(args):
-    out = ZipFile(args.output, mode="w")
+    fat = FatJar(ZipFile(args.output, mode="w"))
 
     if args.input:
         with open(args.input, "r") as fp:
@@ -33,7 +42,7 @@ def merge(args):
 
     status(f"""merging {", ".join(map(lambda f: f"'{f}'", args.filename))} into '{args.output}'""")
     for file in args.filename:
-        merge_into(ZipFile(file), out)
+        fat.merge(ZipFile(file))
 
 def make_argparser():
     parser = argparse.ArgumentParser(
