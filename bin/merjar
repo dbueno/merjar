@@ -50,7 +50,17 @@ def make_argparser():
             f"""
             Merge JAR files safely.
 
-            Merges all jars given on the command line and in files into one jar. This is done in memory rather than by extracting into files. This avoids an issue where filenames like 'com.tony.stark' and 'com.Tony.Stark' collide on case-insensitive filesystems."""))
+            Merges all jars given on the command line and in files into one jar. This is done in memory rather than by extracting into files. This avoids an issue where filenames like 'com.tony.stark' and 'com.Tony.Stark' collide on case-insensitive filesystems. Duplicate entries are ignored.
+
+            Example:
+            # Merge a.jar and b.jar into combined.jar
+            merjar -o combined.jar a.jar b.jar
+
+            echo a.jar >> jarlist.txt
+            echo b.jar >> jarlist.txt
+            # Merge a.jar and b.jar into combined.jar
+            merjar -o combined.jar -i jarlist.txt
+            """))
     parser.add_argument("--log", metavar="<level>", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], default="WARNING",
                         help="Logger level: %(choices)s (default: %(default)s)")
     parser.add_argument("filename", metavar="<jarfile>", nargs="*",
