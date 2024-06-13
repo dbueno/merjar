@@ -10,9 +10,7 @@
   outputs = { self, nixpkgs, flake-utils, flake-compat } :
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs { inherit system; };
-
-        merjar-pkg = { python3, makeWrapper, lib }: python3.pkgs.buildPythonPackage rec {
+        merjar-pkg = { python3Packages, makeWrapper, lib }: python3Packages.buildPythonApplication rec {
           name = "merjar";
           version = "0.0.1";
           src =
@@ -24,10 +22,13 @@
             (path: type: !(elem (baseNameOf path) elide))
             ./.;
 
+          build-system = with python3Packages; [ setuptools ];
+
           doCheck = false;
           meta.mainProgram = "merjar";
         };
 
+        pkgs = import nixpkgs { inherit system; };
         merjar = pkgs.callPackage merjar-pkg {};
 
       in {
