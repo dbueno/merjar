@@ -12,7 +12,7 @@
       let
         merjar-pkg = { python3Packages, makeWrapper, lib }: python3Packages.buildPythonApplication rec {
           name = "merjar";
-          version = "0.0.1";
+          version = "0.0.2";
           src =
             let
               elide = [];
