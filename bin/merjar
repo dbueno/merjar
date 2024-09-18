@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
-from zipfile import ZipFile
+from zipfile import ZipFile, ZipInfo
 import argparse
 import logging
 import textwrap
 import importlib.metadata
+
+from collections import defaultdict
+from collections.abc import Collection
 
 logger = logging.getLogger(__name__)
 try:
@@ -17,32 +20,62 @@ def status(msg):
     print(f"-- {msg}")
 
 class FatJar:
-    def __init__(self, out: ZipFile):
+    def __init__(self, out: ZipFile, merge: Collection[str]):
         self._out = out
         self._name_index = set()
+        self._unhandled_dupes = set()
+        self._merge = merge
+        self._merged: dict[str, list[tuple[ZipInfo, bytes]]] = defaultdict(list)
+        logger.debug(f"merge set: {merge}")
+
+    def num_duplicates(self):
+        return len(self._unhandled_dupes)
+
+    def duplicates(self):
+        return self._unhandled_dupes
 
     def merge(self, zipfile: ZipFile):
+        logger.debug(f"starting {zipfile}")
         for info in zipfile.infolist():
             if info.is_dir():
                 continue
-            # Skips duplicate entries
-            if info.filename in self._name_index:
-                continue
-            self._name_index.add(info.filename)
-            with zipfile.open(info) as rf:
-                with self._out.open(info, "w") as wf:
-                    wf.write(rf.read())
+            if info.filename in self._merge:
+                with zipfile.open(info) as rf:
+                    logger.debug(f"merging {info.filename} from {zipfile}")
+                    self._merged[info.filename].append((info, rf.read()))
+            elif info.filename in self._name_index:
+                self._unhandled_dupes.add(info.filename)
+            else:
+                self._name_index.add(info.filename)
+                with zipfile.open(info) as rf:
+                    with self._out.open(info, "w") as wf:
+                        wf.write(rf.read())
+
+    def merge_duplicates(self):
+        # Output merged filenames
+        for records in self._merged.values():
+            contents = b"".join(contents for _, contents in records)
+            info = None
+            for info, _ in records:
+                break
+            assert info is not None
+            with self._out.open(info, "w") as wf:
+                wf.write(contents)
 
 def merge(args):
-    fat = FatJar(ZipFile(args.output, mode="w"))
+    fat = FatJar(ZipFile(args.output, mode="w"), args.merge)
 
     if args.input:
         with open(args.input, "r") as fp:
             args.filename.extend(line.strip() for line in fp)
 
-    status(f"""merging {", ".join(map(lambda f: f"'{f}'", args.filename))} into '{args.output}'""")
+    status(f"""merging {len(args.filename)} jars into '{args.output}': {", ".join(map(lambda f: f"'{f}'", args.filename))}""")
     for file in args.filename:
         fat.merge(ZipFile(file))
+    fat.merge_duplicates()
+    status(f"found {fat.num_duplicates()} duplicate filenames inside the jars")
+    if fat.num_duplicates() > 0:
+        status(f"duplicates: {fat.duplicates()}")
 
 def make_argparser():
     parser = argparse.ArgumentParser(
@@ -50,7 +83,7 @@ def make_argparser():
             f"""
             Merge JAR files safely.
 
-            Merges all jars given on the command line and in files into one jar. This is done in memory rather than by extracting into files. This avoids an issue where filenames like 'com.tony.stark' and 'com.Tony.Stark' collide on case-insensitive filesystems. Duplicate entries are ignored.
+            Merges all jars given on the command line and in files into one jar. This is done in memory rather than by extracting into files. This avoids an issue where filenames like 'com.tony.stark' and 'com.Tony.Stark' collide on case-insensitive filesystems. Duplicate entries are ignored, except where --merge is specified.
 
             Example:
             # Merge a.jar and b.jar into combined.jar
@@ -63,12 +96,15 @@ def make_argparser():
             """))
     parser.add_argument("--log", metavar="<level>", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], default="WARNING",
                         help="Logger level: %(choices)s (default: %(default)s)")
-    parser.add_argument("filename", metavar="<jarfile>", nargs="*",
-                        help="Jar file to merge")
     parser.add_argument("-i", "--input", metavar="<jarfile-list>",
                         help="File that contains a list of jar files, one per line")
     parser.add_argument("-o", "--output", metavar="<jarfile>", default="merjar.jar",
                         help="Merged jar file")
+    parser.add_argument("--merge",
+                        metavar="<path-in-jar>", action="append", default=[],
+                        help="Path in output jar to merge from multiple jars")
+    parser.add_argument("filename", metavar="<jarfile>", nargs="*",
+                        help="Jar file to merge")
     return parser
 
 def main():
