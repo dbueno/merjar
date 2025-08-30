@@ -22,6 +22,7 @@
             (path: type: !(elem (baseNameOf path) elide))
             ./.;
 
+          pyproject = true;
           build-system = with python3Packages; [ setuptools ];
 
           doCheck = false;
